@@ -1,0 +1,47 @@
+(ns acme.main
+  (:require ["package:flutter/material.dart" :as m]
+            ["package:hive_flutter/hive_flutter.dart" :as hive]
+            ["package:hive_flutter/hive_flutter.dart" :as hive-flutter]
+            ["package:flutter/foundation.dart" :as foundation]
+
+            [cljd.flutter :as f]))
+
+
+(def box-name "level")
+
+(def box (.openBox hive/Hive box-name))
+
+(defn next-level []
+  (let [box (-> (.openBox hive/Hive box-name) await)
+        current-level (.get box "current-level")]
+    (.put box "current-level" (+ current-level 1))))
+
+;; (defn get-current-level []
+;;   (let [box (-> (.openBox hive/Hive box-name) await)]
+;;     (.get box "current-level")))
+
+
+(defn ^foundation/ValueListenable listenable
+  ([box] (listenable box nil))
+  ([^hive/Box box keys] (-> box hive-flutter/BoxX (.listenable .keys keys))))
+
+(defn main []
+  (.ensureInitialized m/WidgetsFlutterBinding)
+  (-> hive-flutter/Hive hive-flutter/HiveX .initFlutter await)
+  (f/run
+   :watch [my-value (listenable box)]
+   (m/MaterialApp
+    .title "Welcome to Flutter"
+    .theme (m/ThemeData .primarySwatch m.Colors/pink))
+   .home
+   (m/Scaffold
+    .appBar (m/AppBar
+             .title (m/Text "Welcome to ClojureDart")))
+   .body
+   m/Center
+   m/Column
+   .children
+   [(m/Text (str my-value))
+    (m/TextButton
+     .child (m/Text "Level Up!")
+     .onPressed (next-level))]))
